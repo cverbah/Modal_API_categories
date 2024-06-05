@@ -12,7 +12,6 @@ from io import BytesIO
 import json
 
 volume = Volume.from_name("my-volumme-2")
-
 app = App(name="api-predict-categories-v1")
 
 conda_image = (Image.micromamba()
