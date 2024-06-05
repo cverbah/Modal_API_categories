@@ -34,6 +34,7 @@ PINECONE_GETI_ENV_FREE = os.environ["PINECONE_GETI_ENV_FREE"]
 MAX_LENGTH = 30  # model parameter
 
 
+
 #mysql
 def skus_from_wv_ids(wv_ids: list, host='db.geti.cl',
                      database='winodds', user='cvergara', password=MYSQL_PASSWORD):

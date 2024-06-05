@@ -119,7 +119,7 @@ async def predict_category_from_wv_ids(wv_id: List[int] = Query()):
         return output
 
 
-@app.function(image=conda_image,gpu=gpu.T4(count=1),      #keep_warm=1,
+@app.function(image=conda_image,gpu=gpu.T4(count=1),
               secret=Secret.from_name("automatch-secret-keys"),
               mounts=[Mount.from_local_file("model_categories_txt_v5_acc.h5",
                                              remote_path="/root/model_categories_txt_v5_acc.h5"),
