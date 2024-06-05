@@ -11,8 +11,8 @@ import os
 from io import BytesIO
 import json
 
-volume = Volume.from_name("my-volumme-2")
-app = App(name="api-predict-categories-v1")
+volume = Volume.from_name("my-volume-2")
+app = App(name="api-predict-category-normalized-v1")
 
 conda_image = (Image.micromamba()
                .micromamba_install(
@@ -131,7 +131,7 @@ async def predict_category_from_wv_ids(wv_id: List[int] = Query()):
                                              remote_path="/root/automatch-309218-5f83b019f742.json")],
               volumes={"/vol": volume}, _allow_background_volume_commits=True,  #before: shared_volumes
               timeout=999)  # schedule=Period(minutes=30)
-@asgi_app(label='predict-categories-v1')
+@asgi_app(label='predict-category-normalized-v1')
 def fastapi_app():
     # check available GPUs
     print(get_available_gpus())

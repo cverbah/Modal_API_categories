@@ -76,42 +76,68 @@ def skus_from_wv_ids(wv_ids: list, host='db.geti.cl',
     return df
 
 # preprocessing
+# preprocessing
+##preprocessing
+#dict units
+dict_units = {}
+dict_units['u'] = ['u', 'un', 'und' 'unit', 'units', 'unidad', 'unidades']
+dict_units['cm'] = ['cm', 'cms', 'centimeter', 'centimetros']
+dict_units['l'] = ['l', 'lt', 'lts', 'litro', 'litros', 'litre', 'litres']
+dict_units['m'] = ['m', 'mt', 'mts', 'metro', 'metros', 'meter', 'meters']
+dict_units['gr'] = ['g', 'gr', 'grs', 'gramo', 'gramos', 'gram', 'grams']
+dict_units['ml'] = ['ml', 'mls', 'mililitro', 'mililitros', 'millilitre', 'millilitres']
+dict_units['kg'] = ['kg', 'kgs', 'kilo', 'k', 'kilos', 'kilogramo', 'kilogramos', 'kilogram', 'kilograms']
+dict_units['lb'] = ['lb','lbs', 'libra', 'libras']
+dict_units['cc'] = ['cc', 'ccs']
+dict_units['mm'] = ['mm', 'mms', 'milimetro', 'milimetros', 'millimeter', 'millimeters']
+dict_units['mg'] = ['mg', 'mgs', 'miligramo', 'miligramos', 'milligram', 'milligrams']
+dict_units['gb'] = ['gb', 'gigabyte', 'gigabytes']
+dict_units['kb'] = ['kb', 'kilobyte', 'kilobytes']
+dict_units['mb'] = ['mb', 'megabyte', 'megabytes']
+dict_units['tb'] = ['tb', 'terabyte', 'terabytes']
+dict_units['w'] = ['w', 'watts']
+dict_units['hz'] = ['hz', 'hertz']
+dict_units['oz'] = ['oz', 'onza', 'onzas', 'ounce']
+
 def get_key(val, dict):
     """returns the key of the dict_units dict"""
     for key, value in dict.items():
         if val in value:
             return key
 
+def split_float(text, dict_units):
+    '''split skus quantity with unit, ex: 20grs, 20 grs'''
+    for key, values in dict_units.items():
+        pattern = '|'.join(values)
+        #split skus quantity with unit, ex:
+        text = re.sub(r'(\d+\.?\d*)(' + pattern + r')', r'\1 \2', text)
+    return text
 
-def join_units(string):
-    """joins numbers with following units (ej:250 grs = 250grs)"""
+def split_combos(text):
+    '''split skus with promotions: ex: '6x100gr' , '6 x 100gr' '''
+    text = re.sub(r'(\d+)x(\d+)', r'\1 x \2', text)
+    return text
+
+
+def remove_integer_pattern(text):
+    # Define the regex pattern to match 4 or 5 integers followed by a space and another 4 or 5 integers
+    pattern = r'\b\d{4,5} \d{4,5}\b'
+
+    result = re.sub(pattern, '', text)
+    # Remove any extra spaces left after removing the pattern
+    result = re.sub(r'\s{2,}', ' ', result).strip()
+
+    return result
+
+
+def join_units(string, dict_units=dict_units):
+    """joins numbers with following units (ej:250 grs = 250gr)"""
 
     # stopwords and dict for merging units to numbers in titles
     stop_words = ['and', 'for', 'the', 'with', 'to', 'y', 'de', 'que', 'en', 'para', 'del', 'le', 'les', 'lo', 'los',
                   'la', 'las', 'con', 'que', 'gratis', 'promo', 'promocion', 'promotion', 'oferta', 'ofertas', 'free', 'gratis',
                   'descuento', 'descuentos', 'dcto', 'pagina', 'page', 'null', 'price', 'precio', 'precios', 'producto',
-                  'productos', 'product', 'products', 'combo']
-
-    # Units dict
-    dict_units = {}
-    dict_units['u'] = ['u', 'un', 'und' 'unit', 'units', 'unidad', 'unidades']
-    dict_units['cm'] = ['cm', 'cms', 'centimeter', 'centimetros']
-    dict_units['l'] = ['l', 'lt', 'lts', 'litro', 'litros', 'litre', 'litres']
-    dict_units['m'] = ['m', 'mt', 'mts', 'metro', 'metros', 'meter', 'meters']
-    dict_units['gr'] = ['g', 'gr', 'grs', 'gramo', 'gramos', 'gram', 'grams']
-    dict_units['ml'] = ['ml', 'mls', 'mililitro', 'mililitros', 'millilitre', 'millilitres']
-    dict_units['kg'] = ['kg', 'kgs', 'kilo', 'k', 'kilos', 'kilogramo', 'kilogramos', 'kilogram', 'kilograms']
-    dict_units['lb'] = ['lb','lbs', 'libra', 'libras']
-    dict_units['cc'] = ['cc', 'ccs']
-    dict_units['mm'] = ['mm', 'mms', 'milimetro', 'milimetros', 'millimeter', 'millimeters']
-    dict_units['mg'] = ['mg', 'mgs', 'miligramo', 'miligramos', 'milligram', 'milligrams']
-    dict_units['gb'] = ['gb', 'gigabyte', 'gigabytes']
-    dict_units['kb'] = ['kb', 'kilobyte', 'kilobytes']
-    dict_units['mb'] = ['mb', 'megabyte', 'megabytes']
-    dict_units['tb'] = ['tb', 'terabyte', 'terabytes']
-    dict_units['w'] = ['w', 'watts']
-    dict_units['hz'] = ['hz', 'hertz']
-    dict_units['oz'] = ['oz', 'onza', 'onzas', 'ounce']
+                  'productos', 'product', 'products', 'combo', 'ceba'] #'especial', 'especiales', 'special', 'specials'
 
     dict_values = np.hstack(list(dict_units.values()))
 
@@ -158,20 +184,34 @@ def join_units(string):
     return formatted
 
 
-def preprocess_products(row):
+def preprocess_products(row, dict_units=dict_units):
     """preprocess the product based on rules"""
-    row = row.replace('unknown','').replace(',','.') .replace('&nbsp', ' ').replace('\xa0','').replace('"','').\
-          replace("/", ' ').replace('**entrega en 2 dias habiles**','').replace('**entrega en 4 dias habiles**','').replace('**entrega en 6 dias habiles**','').\
-          replace('**entrega en 7 dias habiles**','').replace('** entrega en 2 dias habiles**','').replace('** entrega en 4 dias habiles**','').\
-          replace('** entrega en 6 dias habiles**','').replace('** entrega en 7 dias habiles**','').replace(' ** entrega en 4 dias habiles **','')
+    row = row.lower()
+    row = row.replace('unknown', '').replace(',', '.').replace('&nbsp', ' ').replace('\xa0', '').replace('"', '').\
+        replace('solo delivery', '').replace('cyber monday', '').replace('&', 'y')
+    # for pets
+    row = row.replace("/", ' ').replace('**entrega en 2 dias habiles**', '').replace('**entrega en 4 dias habiles**','').\
+        replace('**entrega en 6 dias habiles**', '').replace('**entrega en 7 dias habiles**', '').\
+        replace('** entrega en 2 dias habiles**', '').replace('** entrega en 4 dias habiles**', '').\
+        replace('** entrega en 6 dias habiles**', '').replace('** entrega en 7 dias habiles**', '').\
+        replace(' ** entrega en 4 dias habiles **', '').replace('gabrica sas', '').replace('gabrica medicamentos', '').\
+        replace('gabrica alimentos', '').replace('jaramillo pets cia sca', '').replace('synergylabs', '').\
+        replace('verosa group sas', '').replace('select pets colombia sas', '').replace('italcol occidente sa', '').\
+        replace('solo delivery', '').replace('colombia sas', '').replace('colombia sa', '').\
+        replace('virbac colombia ltda', '').replace('concentrados norte 1 sas', '').replace('gesto agro sas','').\
+        replace('industria colombiana farmaceutica icofar', '').replace('flatazor', '').\
+        replace('alimentos italcol', '').replace('comercial mas bios s a', '').replace('colombia ltda', '')
 
-    row = ''.join(re.findall('[-+]?(?:\d*\.\d+|\d+)|\d|\s|\w|\+', row)).lower()
+    row = ''.join(re.findall('[-+]?(?:\d*\.\d+|\d+)|\d|\s|\w|\+', row))
     row = row.replace('-', ' ')
     row = re.sub(r'[_]', ' ', row)
     aux = ['mas' if token == '+' else token for token in row.split()]
     row = ' '.join(aux)
 
     row = unidecode.unidecode(row)  # removes special characters
+    row = split_combos(row)
+    row = split_float(row, dict_units)
+    row = remove_integer_pattern(row)
     row = join_units(row)  # units formatting
     row = row.split()
     row = " ".join(sorted(set(row), key=row.index))  # removes duplicates
