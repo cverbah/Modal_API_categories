@@ -1,0 +1,6 @@
+# ignore env
+*.env
+#ignore idea
+*.idea
+*.json
+*.h5
