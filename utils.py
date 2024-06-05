@@ -77,8 +77,6 @@ def skus_from_wv_ids(wv_ids: list, host='db.geti.cl',
     return df
 
 # preprocessing
-# preprocessing
-##preprocessing
 #dict units
 dict_units = {}
 dict_units['u'] = ['u', 'un', 'und' 'unit', 'units', 'unidad', 'unidades']
