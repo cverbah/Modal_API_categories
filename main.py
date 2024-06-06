@@ -132,7 +132,7 @@ async def predict_category_from_wv_ids(wv_id: List[int] = Query()):
               volumes={"/vol": volume}, _allow_background_volume_commits=True,  #before: shared_volumes
               timeout=999)  # schedule=Period(minutes=30)
 @asgi_app(label='predict-category-normalized-v1')
-def fastapi_app():
+def normalize_category_app():
     # check available GPUs
     print(get_available_gpus())
 
