@@ -76,6 +76,8 @@ def sku_to_data_from_sql(skus_ids_to_search: list, retail_id_to_search: int, hos
     df = pd.DataFrame(cols_and_rows)
     return df
 
+
+# DEPRECATED
 def skus_from_wv_ids(wv_ids: list, retail_id: int,  host='db.geti.cl',
                      database='winodds', user='cvergara', password=MYSQL_PASSWORD):
     '''' extract data from mySQL based on the vector search result '''
@@ -114,7 +116,7 @@ def skus_from_wv_ids(wv_ids: list, retail_id: int,  host='db.geti.cl',
     df = pd.DataFrame(cols_and_rows)
     return df
 
-# preprocessing
+# Preprocessing functions
 #dict units
 dict_units = {}
 dict_units['u'] = ['u', 'un', 'und' 'unit', 'units', 'unidad', 'unidades']
@@ -143,7 +145,7 @@ def get_key(val, dict):
             return key
 
 def split_float(text, dict_units):
-    '''split skus quantity with unit, ex: 20grs, 20 grs'''
+    """split skus quantity with unit, ex: 20grs, 20 grs"""
     for key, values in dict_units.items():
         pattern = '|'.join(values)
         #split skus quantity with unit, ex:
@@ -151,12 +153,13 @@ def split_float(text, dict_units):
     return text
 
 def split_combos(text):
-    '''split skus with promotions: ex: '6x100gr' , '6 x 100gr' '''
+    """split skus with promotions: ex: '6x100gr' , '6 x 100gr'"""
     text = re.sub(r'(\d+)x(\d+)', r'\1 x \2', text)
     return text
 
 
 def remove_integer_pattern(text):
+    """removes pattern of numbers (noise)"""
     # Define the regex pattern to match 4 or 5 integers followed by a space and another 4 or 5 integers
     pattern = r'\b\d{4,5} \d{4,5}\b'
 
@@ -222,7 +225,7 @@ def join_units(string, dict_units=dict_units):
 
 
 def preprocess_products(row, dict_units=dict_units):
-    """preprocess the product based on rules"""
+    """preprocess the product based on rules. Main function for preprocessing using the ones above"""
     row = row.lower()
     row = row.replace('unknown', '').replace(',', '.').replace('&nbsp', ' ').replace('\xa0', '').replace('"', '').\
         replace('solo delivery', '').replace('cyber monday', '').replace('&', 'y')
@@ -255,8 +258,9 @@ def preprocess_products(row, dict_units=dict_units):
 
     return row
 
+
 def preprocess_products_category_version(row):
-    """preprocess the product based on rules"""
+    """preprocess the category name based on rules"""
     row = str(row).lower()
     row = unidecode.unidecode(row)
     row = row.replace('unknown','').replace(',','.') .replace('&nbsp', ' ').replace('\xa0','').replace('"','').\
@@ -292,14 +296,16 @@ def get_available_gpus():
     return [x.name for x in local_device_protos if x.device_type == 'GPU']
 
 
+# Loading Bert model and tokenizer from Hugging face & building automatch model
 gpus_list = get_available_gpus()
+# URL for getting: BERT multi & uncased from HuggingFace
 bert_multi_url = 'bert-base-multilingual-uncased'
-
 
 print('loading BERT Multilingual Model and tokenizer from HuggingFace...')
 bert_multi_model = TFBertModel.from_pretrained(bert_multi_url, cache_dir=CACHE_DIR)
 bert_tokenizer = BertTokenizer.from_pretrained(bert_multi_url, cache_dir=CACHE_DIR)
 
+# normalized categories to predict.
 with open('./dict_categories.pkl', 'rb') as f:
     dict_categories_norm = pickle.load(f)
 
@@ -307,7 +313,8 @@ with open('./dict_categories_inv.pkl', 'rb') as f:
     dict_categories_inv_norm = pickle.load(f)
 
 
-def build_model_categories(model=bert_multi_model,target_dict=dict_categories_norm, seq_length=MAX_LENGTH):
+def build_model_categories(model=bert_multi_model, target_dict=dict_categories_norm, seq_length=MAX_LENGTH):
+    """Model architecture using BERT as backbone for predicting a normalized category"""
     classes = len(target_dict)
 
     input_ids = tf.keras.layers.Input(shape=(seq_length,), dtype=tf.int64, name="input_ids")
@@ -339,19 +346,22 @@ print('loading Custom Model for normalized categories predictions...')
 if len(gpus_list) > 0:
     with tf.device(gpus_list[0]):
         cats_model = build_model_categories(model=bert_multi_model,target_dict=dict_categories_norm, seq_length=MAX_LENGTH)
-        cats_model.load_weights('model_categories_txt_v5_acc.h5')  # loading model weights
-else:  # No GPU , raro.
+        cats_model.load_weights('model_categories_txt_v5_acc.h5')  # loading model weights from training
+else:  # if there is No GPU available -> use CPU
 
     cats_model = build_model_categories(model=bert_multi_model, target_dict=dict_categories_norm, seq_length=MAX_LENGTH)
-    cats_model.load_weights('model_categories_txt_v5_acc.h5')  # loading model weights
+    cats_model.load_weights('model_categories_txt_v5_acc.h5')
 
 
 def encode_products(join, max_length=MAX_LENGTH, tokenizer=bert_tokenizer):
+    """encondes an input using the BERT Tokenizer"""
     out = tokenizer(join, padding="max_length", truncation=True, max_length=max_length, return_tensors="np")
     return out
 
 
-def predict_product_category(cat, product, top, model, max_length=MAX_LENGTH, tokenizer=bert_tokenizer, dict_categories=dict_categories_norm):
+def predict_product_category(cat, product, top, model, max_length=MAX_LENGTH,
+                             tokenizer=bert_tokenizer, dict_categories=dict_categories_norm):
+    """makes predictions of top categories based on: [brand_and_product + category_name]"""
 
     labels = np.array(list(dict_categories.keys()))
     cat_prepro = [preprocess_products_category_version(cat)]
@@ -369,16 +379,14 @@ def predict_product_category(cat, product, top, model, max_length=MAX_LENGTH, to
     return pred_top
 
 
-# GCP embedding model (sin usar por ahora. igual la dejo aca, who knows)
-#embedding_model_gcp = TextEmbeddingModel.from_pretrained("textembedding-gecko@001")
+# GCP embedding model (Not used rn. Still Ill leave it here, who knows)
+# embedding_model_gcp = TextEmbeddingModel.from_pretrained("textembedding-gecko@003")
 
-
-#def get_embedding_txt_gcp(text, model=embedding_model_gcp):
+# def get_embedding_txt_gcp(text, model=embedding_model_gcp):
 #    """returns the embedding for a string using gcp embedding model"""
 #    text = text.replace("\n", " ")
 #    embedding = model.get_embeddings([text])
 #    embedding = embedding[0].values
-#
 #    return embedding
 
 

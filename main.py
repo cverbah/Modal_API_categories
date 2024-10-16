@@ -30,12 +30,15 @@ class MyMiddleware(BaseHTTPMiddleware):
         return response
 
 
+# FastAPI app
 categories_app = FastAPI(title='CategoryPredictionsAPI',
                        summary="API for predicting the category of a sku", version="1.1",
                        contact={
                                 "name": "Cristian Vergara",
                                 "email": "cvergara@geti.cl",
                                 })
+
+# Add CORSMiddleware
 categories_app.add_middleware(
     CORSMiddleware,
     allow_origins=['*'],
@@ -43,16 +46,18 @@ categories_app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*'])
 categories_app.add_middleware(MyMiddleware)
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-@categories_app.get("/")
+@categories_app.get("/")  # dummy
 def read_root():
     return {"Root": "Root_test"}
 
 
+# Predicts a normalized category from a retail website.
+# Copy and paste the title: brand+product_name+variety into product_title
+# Copy and past: product category from retail website in product_category
 @categories_app.get("/sku-category-prediction-web")
-async def predict_category_from_website(product_title: str, product_category: str): # used to predict category from website
+async def predict_category_from_website(product_title: str, product_category: str):
     try:
         print('Making prediction..\n')
         start = time.time()
@@ -62,6 +67,8 @@ async def predict_category_from_website(product_title: str, product_category: st
         df['predicted_category'] = df.apply(
             lambda row: predict_product_category(row['category_name'], row['product_name'], top=2, model=cats_model, max_length=MAX_LENGTH,
                                                  tokenizer=bert_tokenizer), axis=1)
+
+        # returns best top2 categories
         df['predicted_category_1'] = df['predicted_category'].apply(lambda row: row[0][0])
         df['probability_category_1'] = df['predicted_category'].apply( lambda row: row[0][1])
         df['predicted_category_2'] = df['predicted_category'].apply(lambda row: row[1][0])
@@ -81,22 +88,26 @@ async def predict_category_from_website(product_title: str, product_category: st
         return output
 
 
+# Predicts a normalized category for a list of skus from winnods
 @categories_app.get("/skus-categories-prediction")
 async def predict_category_from_skus(retail_id: int, skus_to_search: List[str] = Query()):
     try:
         skus_to_predict = {"web_variety_ids": skus_to_search}
         skus = skus_to_predict["web_variety_ids"]
-
+        # get skus data from winnods
         df = sku_to_data_from_sql(skus_ids_to_search=skus, retail_id_to_search=retail_id)
         print(df)
         df_to_print = df[['id', 'sku', 'retail_id', 'category_name']]
         print(f'Skus to predict the category: \n {df_to_print}')
         print('Making prediction..')
+        # preprocess data
         df['brand_and_product'] = df.brand + ' ' + df.product_name + ' ' + df.variety_name
         df['brand_and_product'] = df['brand_and_product'].apply(lambda row: preprocess_products(str(row)))
+        # make prediction
         df['predicted_category'] = df.apply(
             lambda row: predict_product_category(row['category_name'], row['brand_and_product'], top=2, model=cats_model,
                                                  max_length=MAX_LENGTH, tokenizer=bert_tokenizer), axis=1)
+        # returns best top2 categories
         df['predicted_category_1'] = df['predicted_category'].apply(lambda row: row[0][0])
         df['probability_category_1'] = df['predicted_category'].apply(lambda row: row[0][1])
         df['predicted_category_2'] = df['predicted_category'].apply(lambda row: row[1][0])
@@ -113,7 +124,8 @@ async def predict_category_from_skus(retail_id: int, skus_to_search: List[str] =
         return output
 
 
-@app.function(image=docker_image,gpu=gpu.T4(count=1),
+# Deploy API in Modal. All mounted files must be in the local pc from where the deployment is generated
+@app.function(image=docker_image, gpu=gpu.T4(count=1),
               secret=Secret.from_name("automatch-secret-keys"),
               mounts=[Mount.from_local_file("model_categories_txt_v5_acc.h5",
                                              remote_path="/root/model_categories_txt_v5_acc.h5"),
