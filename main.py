@@ -16,7 +16,7 @@ app = App(name="api-predict-category-normalized-v1")
 
 docker_image = (Image.from_registry("tensorflow/tensorflow:2.12.0-gpu",)
                 .pip_install("protobuf==3.20.*", "pandas", "numpy", "matplotlib", "requests",
-                             "transformers=4.44.2", "Unidecode", "python-dotenv", "mysql-connector-python",
+                             "transformers==4.44.2", "Unidecode", "python-dotenv", "mysql-connector-python",
                              "scikit-learn", "google-cloud-aiplatform==1.25", "python-jose[cryptography]",
                              "passlib[bcrypt]", "python-multipart", "openpyxl"))
 
