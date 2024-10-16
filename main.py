@@ -6,7 +6,7 @@ from fastapi import FastAPI, Response, Query, File, UploadFile, Request
 import time
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List, Annotated
+from typing import List
 import os
 from io import BytesIO
 import json
