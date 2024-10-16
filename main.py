@@ -14,18 +14,12 @@ import json
 volume = Volume.from_name("my-volume-2")
 app = App(name="api-predict-category-normalized-v1")
 
-conda_image = (Image.micromamba()
-               .micromamba_install(
-                "cudatoolkit=11.2",
-                "cudnn=8.1.0",
-                "cuda-nvcc",
-                channels=["conda-forge", "nvidia"],
-                )
-               .pip_install("pandas", "numpy", "matplotlib", "requests",
-                            "jax", "jaxlib", "transformers", "tensorflow~=2.9.1",
-                            "Unidecode", "python-dotenv", "mysql-connector-python",
-                            "scikit-learn", "google-cloud-aiplatform==1.25", "python-jose[cryptography]",
-                            "passlib[bcrypt]", "python-multipart", "openpyxl"))
+docker_image = (Image.from_registry("tensorflow/tensorflow:2.12.0-gpu",)
+                .pip_install("pandas", "numpy", "matplotlib", "requests",
+                             "jax", "jaxlib", "transformers", "tensorflow~=2.9.1",
+                             "Unidecode", "python-dotenv", "mysql-connector-python",
+                             "scikit-learn", "google-cloud-aiplatform==1.25", "python-jose[cryptography]",
+                             "passlib[bcrypt]", "python-multipart", "openpyxl"))
 
 
 class MyMiddleware(BaseHTTPMiddleware):
@@ -119,7 +113,7 @@ async def predict_category_from_wv_ids(wv_id: List[int] = Query()):
         return output
 
 
-@app.function(image=conda_image,gpu=gpu.T4(count=1),
+@app.function(image=docker_image,gpu=gpu.T4(count=1),
               secret=Secret.from_name("automatch-secret-keys"),
               mounts=[Mount.from_local_file("model_categories_txt_v5_acc.h5",
                                              remote_path="/root/model_categories_txt_v5_acc.h5"),
