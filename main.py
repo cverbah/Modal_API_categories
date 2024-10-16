@@ -81,14 +81,15 @@ async def predict_category_from_website(product_title: str, product_category: st
         return output
 
 
-@categories_app.get("/wv-ids-categories-prediction")
-async def predict_category_from_wv_ids(wv_id: List[int] = Query()):
+@categories_app.get("/skus-categories-prediction")
+async def predict_category_from_skus(retail_id: int, skus_to_search: List[str] = Query()):
     try:
-        wv_ids_to_predict = {"web_variety_ids": wv_id}
-        web_variety_ids = wv_ids_to_predict["web_variety_ids"]
+        skus_to_predict = {"web_variety_ids": skus_to_search}
+        skus = skus_to_predict["web_variety_ids"]
 
-        df = skus_from_wv_ids(web_variety_ids)
-        df_to_print = df[['id', 'sku', 'retail_id']]
+        df = sku_to_data_from_sql(skus_ids_to_search=skus, retail_id_to_search=retail_id)
+        print(df)
+        df_to_print = df[['id', 'sku', 'retail_id', 'category_name']]
         print(f'Skus to predict the category: \n {df_to_print}')
         print('Making prediction..')
         df['brand_and_product'] = df.brand + ' ' + df.product_name + ' ' + df.variety_name

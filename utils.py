@@ -34,9 +34,49 @@ PINECONE_GETI_ENV = os.environ["PINECONE_GETI_ENV"]
 MAX_LENGTH = 30  # model parameter
 
 
-
 #mysql
-def skus_from_wv_ids(wv_ids: list, host='db.geti.cl',
+def sku_to_data_from_sql(skus_ids_to_search: list, retail_id_to_search: int, host='db.geti.cl',
+                         database='winodds', user='cvergara', password=MYSQL_PASSWORD):
+    """extract data from mySQL based on the skus and retails ids. Used for starting the candidates search"""
+
+    # formatting for the query
+    if len(skus_ids_to_search) == 1:
+        results_ids = tuple(skus_ids_to_search)[0]
+        results_ids = f"'{results_ids}'"
+        aux = '='
+    elif len(skus_ids_to_search) > 1:
+        results_ids = tuple(skus_ids_to_search)
+        aux = 'IN'
+
+    # Creating connection object
+    mydb = mysql.connector.connect(
+        host=host,
+        user=user,
+        password=password,
+        database=database
+    )
+
+    mycursor = mydb.cursor()
+
+    query = f"SELECT wv.id, wv.retail_id, \
+              wv.sku, wv.brand AS brand,\
+              wv.product_name, wv.variety_name, \
+              wv.web_category_id, wc.name AS category_name, \
+              wv.image, wv.url \
+              FROM winodds.web_varieties wv\
+              INNER JOIN winodds.web_categories wc ON wv.web_category_id = wc.id \
+              WHERE wv.sku {aux} {results_ids} && wv.retail_id = {retail_id_to_search} && wv.discontinued = 0"
+
+    mycursor.execute(query)
+    results = mycursor.fetchall()
+
+    # inserting the results into a dataframe
+    cols_name = [i[0] for i in mycursor.description]
+    cols_and_rows = [dict(zip(cols_name, result)) for result in results]
+    df = pd.DataFrame(cols_and_rows)
+    return df
+
+def skus_from_wv_ids(wv_ids: list, retail_id: int,  host='db.geti.cl',
                      database='winodds', user='cvergara', password=MYSQL_PASSWORD):
     '''' extract data from mySQL based on the vector search result '''
 
@@ -63,8 +103,7 @@ def skus_from_wv_ids(wv_ids: list, host='db.geti.cl',
               wv.brand, wv.product_name, wv.variety_name, wv.url \
               FROM winodds.web_varieties wv \
               INNER JOIN winodds.web_categories wc ON wv.web_category_id = wc.id \
-              WHERE wv.id {aux} {wv_ids}"
-
+              WHERE wv.id {aux} {wv_ids} && wv.retaild_id={retail_id} && wv.discontinued = 0"
 
     mycursor.execute(query)
     results = mycursor.fetchall()
@@ -73,7 +112,6 @@ def skus_from_wv_ids(wv_ids: list, host='db.geti.cl',
     cols_name = [i[0] for i in mycursor.description]
     cols_and_rows = [dict(zip(cols_name, result)) for result in results]
     df = pd.DataFrame(cols_and_rows)
-
     return df
 
 # preprocessing
