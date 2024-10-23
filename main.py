@@ -103,6 +103,7 @@ async def predict_category_from_skus(retail_id: int, skus_to_search: List[str] =
         # preprocess data
         df['brand_and_product'] = df.brand + ' ' + df.product_name + ' ' + df.variety_name
         df['brand_and_product'] = df['brand_and_product'].apply(lambda row: preprocess_products(str(row)))
+        df['category_name'] = df['category_name'].apply(lambda row: preprocess_products_category_version(str(row)))
         # make prediction
         df['predicted_category'] = df.apply(
             lambda row: predict_product_category(row['category_name'], row['brand_and_product'], top=2, model=cats_model,
@@ -126,7 +127,7 @@ async def predict_category_from_skus(retail_id: int, skus_to_search: List[str] =
 
 # Deploy API in Modal. All mounted files must be in the local pc from where the deployment is generated
 @app.function(image=docker_image, gpu=gpu.T4(count=1),
-              secret=Secret.from_name("automatch-secret-keys"),
+              secrets=[Secret.from_name("automatch-secret-keys")],
               mounts=[Mount.from_local_file("model_categories_txt_v5_acc.h5",
                                              remote_path="/root/model_categories_txt_v5_acc.h5"),
                       Mount.from_local_file("dict_categories.pkl",
