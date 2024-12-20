@@ -136,7 +136,6 @@ async def predict_category_from_skus(retail_id: int, skus_to_search: List[str] =
                                              remote_path="/root/dict_categories_inv.pkl"),
                       Mount.from_local_file("key.json",
                                              remote_path="/root/key.json")],
-              volumes={"/vol": volume}, _allow_background_volume_commits=True,  #before: shared_volumes
               timeout=999)  # schedule=Period(minutes=30)
 @asgi_app(label='predict-category-normalized-v1')
 def normalize_category_app():
