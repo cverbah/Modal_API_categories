@@ -134,8 +134,8 @@ async def predict_category_from_skus(retail_id: int, skus_to_search: List[str] =
                                              remote_path="/root/dict_categories.pkl"),
                       Mount.from_local_file("dict_categories_inv.pkl",
                                              remote_path="/root/dict_categories_inv.pkl"),
-                      Mount.from_local_file("automatch-309218-5f83b019f742.json",
-                                             remote_path="/root/automatch-309218-5f83b019f742.json")],
+                      Mount.from_local_file("key.json",
+                                             remote_path="/root/key.json")],
               volumes={"/vol": volume}, _allow_background_volume_commits=True,  #before: shared_volumes
               timeout=999)  # schedule=Period(minutes=30)
 @asgi_app(label='predict-category-normalized-v1')

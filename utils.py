@@ -25,7 +25,7 @@ pd.options.mode.chained_assignment = None
 load_dotenv()
 MYSQL_PASSWORD = os.environ["MYSQL_PASSWORD"]
 MYSQL_PASSWORD_ASSISTED_MATCH = os.environ["MYSQL_PASSWORD_ASSISTED_MATCH"]
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'automatch-309218-5f83b019f742.json'
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'key.json'
 CACHE_DIR = "/Users/cvergarabah/.cache/huggingface/hub"
 PINECONE_GETI_API_KEY = os.environ["PINECONE_GETI_API_KEY"]
 PINECONE_GETI_ENV = os.environ["PINECONE_GETI_ENV"]
